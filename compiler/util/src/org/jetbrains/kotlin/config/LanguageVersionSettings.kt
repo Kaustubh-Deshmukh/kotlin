@@ -62,6 +62,7 @@ enum class LanguageFeature(
     InnerClassInEnumEntryClass(KOTLIN_1_2),
     CallableReferencesToClassMembersWithEmptyLHS(KOTLIN_1_2),
     JvmPackageName(KOTLIN_1_2),
+    AssigningArraysToVarargsInNamedFormInAnnotations(KOTLIN_1_2),
 
     RestrictionOfValReassignmentViaBackingField(KOTLIN_1_3),
     NestedClassesInEnumEntryShouldBeInner(KOTLIN_1_3),
