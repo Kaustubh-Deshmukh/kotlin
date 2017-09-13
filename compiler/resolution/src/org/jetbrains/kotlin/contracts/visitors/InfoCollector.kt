@@ -16,13 +16,13 @@
 
 package org.jetbrains.kotlin.contracts.visitors
 
+import org.jetbrains.kotlin.builtins.DefaultBuiltIns
 import org.jetbrains.kotlin.contracts.MutableContextInfo
 import org.jetbrains.kotlin.contracts.impls.*
 import org.jetbrains.kotlin.contracts.structure.ESClause
 import org.jetbrains.kotlin.contracts.structure.ESEffect
-import org.jetbrains.kotlin.contracts.structure.EffectSchema
-import org.jetbrains.kotlin.contracts.factories.lift
 import org.jetbrains.kotlin.contracts.structure.ESExpressionVisitor
+import org.jetbrains.kotlin.contracts.structure.EffectSchema
 
 class InfoCollector(private val observedEffect: ESEffect) : ESExpressionVisitor<MutableContextInfo> {
     private var isInverted: Boolean = false
@@ -34,7 +34,8 @@ class InfoCollector(private val observedEffect: ESEffect) : ESExpressionVisitor<
         val premise = clause.condition
 
         // Check for non-conditional effects
-        if (premise is ESBooleanConstant && premise.value) {
+        // TODO: Remove
+        if (premise == ESConstant.TRUE) {
             return MutableContextInfo.EMPTY.fire(clause.effect)
         }
 
@@ -72,25 +73,14 @@ class InfoCollector(private val observedEffect: ESEffect) : ESExpressionVisitor<
     }
 
     override fun visitVariable(esVariable: ESVariable): MutableContextInfo {
-        throw IllegalStateException("InfoCollector shouldn't visit non-boolean values")
-    }
-
-    override fun visitBooleanVariable(esBooleanVariable: ESBooleanVariable): MutableContextInfo =
-            if (isInverted)
-                MutableContextInfo.EMPTY.equal(esBooleanVariable, false.lift())
-            else
-                MutableContextInfo.EMPTY.equal(esBooleanVariable, true.lift())
-
-    override fun visitBooleanConstant(esBooleanConstant: ESBooleanConstant): MutableContextInfo {
-        throw IllegalStateException("InfoCollector shouldn't visit constants")
+        return if (esVariable.type != DefaultBuiltIns.Instance.booleanType)
+            MutableContextInfo.EMPTY
+        else
+            MutableContextInfo.EMPTY.equal(esVariable, isInverted.not().lift())
     }
 
     override fun visitConstant(esConstant: ESConstant): MutableContextInfo {
         throw IllegalStateException("InfoCollector shouldn't visit constants")
-    }
-
-    override fun visitLambda(esLambda: ESLambda): MutableContextInfo {
-        throw IllegalStateException("InfoCollector shouldn't visit non-boolean values")
     }
 
     private fun <R> inverted(block: () -> R): R {

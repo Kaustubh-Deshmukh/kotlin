@@ -18,20 +18,21 @@ package org.jetbrains.kotlin.contracts.functors
 
 import org.jetbrains.kotlin.contracts.effects.ESReturns
 import org.jetbrains.kotlin.contracts.factories.createClause
-import org.jetbrains.kotlin.contracts.factories.negated
-import org.jetbrains.kotlin.contracts.impls.ESBooleanConstant
+import org.jetbrains.kotlin.contracts.impls.ESConstant
 import org.jetbrains.kotlin.contracts.structure.ESClause
-import org.jetbrains.kotlin.utils.addToStdlib.cast
 
 class NotFunctor : AbstractSequentialUnaryFunctor() {
-    override fun combineClauses(list: List<ESClause>): List<ESClause> = list.mapNotNull {
+    override fun applyToFinishingClauses(list: List<ESClause>): List<ESClause> = list.mapNotNull {
         val outcome = it.effect
 
-        // Outcome guaranteed to be Returns by AbstractSequentialUnaryFunctor, but cast
-        // to boolean constant can fail in case of type-errors in the whole expression,
-        // like "foo(bar) && 1"
-        val booleanValue = outcome.cast<ESReturns>().value as? ESBooleanConstant ?: return@mapNotNull null
+        // Outcome guaranteed to be Returns by AbstractSequentialUnaryFunctor, but value
+        // can be non-boolean in case of type-errors in the whole expression, like "foo(bar) && 1"
+        val returnValue = (outcome as ESReturns).value
 
-        return@mapNotNull createClause(it.condition, ESReturns(booleanValue.negated()))
+        when (returnValue) {
+            ESConstant.TRUE -> createClause(it.condition, ESReturns(ESConstant.FALSE))
+            ESConstant.FALSE -> createClause(it.condition, ESReturns(ESConstant.TRUE))
+            else -> null
+        }
     }
 }

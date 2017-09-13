@@ -32,6 +32,6 @@ package org.jetbrains.kotlin.contracts.structure
  *  - if [effect] wasn't observed, we *can't* reason that [condition] is false
  *  - if [condition] is true, we *can't* reason that [effect] will be observed.
  */
-class ESClause(val condition: ESBooleanExpression, val effect: ESEffect) {
+class ESClause(val condition: ESExpression, val effect: ESEffect) {
     fun replaceEffect(newEffect: ESEffect) = ESClause(condition, newEffect)
 }

@@ -16,11 +16,11 @@
 
 package org.jetbrains.kotlin.contracts.visitors
 
-import org.jetbrains.kotlin.contracts.factories.boundSchemaFromClauses
-import org.jetbrains.kotlin.contracts.factories.lift
-import org.jetbrains.kotlin.contracts.factories.negated
 import org.jetbrains.kotlin.contracts.impls.*
-import org.jetbrains.kotlin.contracts.structure.*
+import org.jetbrains.kotlin.contracts.structure.ESClause
+import org.jetbrains.kotlin.contracts.structure.ESExpression
+import org.jetbrains.kotlin.contracts.structure.ESExpressionVisitor
+import org.jetbrains.kotlin.contracts.structure.EffectSchema
 import org.jetbrains.kotlin.types.typeUtil.isSubtypeOf
 
 /**
@@ -29,22 +29,22 @@ import org.jetbrains.kotlin.types.typeUtil.isSubtypeOf
  */
 class Reducer : ESExpressionVisitor<ESExpression?> {
     fun reduceSchema(schema: EffectSchema): EffectSchema =
-            boundSchemaFromClauses(schema.clauses.mapNotNull { reduceClause(it) })
+            EffectSchema(schema.clauses.mapNotNull { reduceClause(it) })
 
-    private fun reduceClause(clause: org.jetbrains.kotlin.contracts.structure.ESClause): org.jetbrains.kotlin.contracts.structure.ESClause? {
-        val reducedPremise = clause.condition.accept(this) as ESBooleanExpression
+    private fun reduceClause(clause: ESClause): ESClause? {
+        val reducedPremise = clause.condition.accept(this) ?: return null
 
         // Filter never executed premises
-        return if (reducedPremise is ESBooleanConstant && !reducedPremise.value) null else ESClause(reducedPremise, clause.effect)
+        return if (reducedPremise is ESConstant && reducedPremise == ESConstant.FALSE) null else ESClause(reducedPremise, clause.effect)
     }
 
-    override fun visitIs(isOperator: ESIs): ESBooleanExpression {
+    override fun visitIs(isOperator: ESIs): ESExpression {
         val reducedArg = isOperator.left.accept(this) as ESValue
 
         val result = when (reducedArg) {
             is ESConstant -> reducedArg.type.isSubtypeOf(isOperator.functor.type)
-            is ESVariable -> if (reducedArg.type.isSubtypeOf(isOperator.functor.type)) true else null
-            else -> throw IllegalStateException("Unknown subtype of ESValue: $reducedArg")
+            is ESVariable -> if (reducedArg.type?.isSubtypeOf(isOperator.functor.type) == true) true else null
+            else -> throw IllegalStateException("Unknown ESValue: $reducedArg")
         }
 
         // Result is unknown, do not evaluate
@@ -53,18 +53,18 @@ class Reducer : ESExpressionVisitor<ESExpression?> {
         return result.xor(isOperator.functor.isNegated).lift()
     }
 
-    override fun visitEqual(equal: ESEqual): ESBooleanExpression {
+    override fun visitEqual(equal: ESEqual): ESExpression {
         val reducedLeft = equal.left.accept(this) as ESValue
         val reducedRight = equal.right
 
-        if (reducedLeft is ESConstant) return (reducedLeft.value == reducedRight.value).xor(equal.functor.isNegated).lift()
+        if (reducedLeft is ESConstant) return (reducedLeft == reducedRight).xor(equal.functor.isNegated).lift()
 
         return ESEqual(reducedLeft, reducedRight, equal.functor)
     }
 
-    override fun visitAnd(and: ESAnd): ESBooleanExpression {
-        val reducedLeft = and.left.accept(this) as ESBooleanExpression
-        val reducedRight = and.right.accept(this) as ESBooleanExpression
+    override fun visitAnd(and: ESAnd): ESExpression? {
+        val reducedLeft = and.left.accept(this) ?: return null
+        val reducedRight = and.right.accept(this) ?: return null
 
         return when {
             reducedLeft == false.lift() || reducedRight == false.lift() -> false.lift()
@@ -74,9 +74,9 @@ class Reducer : ESExpressionVisitor<ESExpression?> {
         }
     }
 
-    override fun visitOr(or: ESOr): ESBooleanExpression {
-        val reducedLeft = or.left.accept(this) as ESBooleanExpression
-        val reducedRight = or.right.accept(this) as ESBooleanExpression
+    override fun visitOr(or: ESOr): ESExpression? {
+        val reducedLeft = or.left.accept(this) ?: return null
+        val reducedRight = or.right.accept(this) ?: return null
 
         return when {
             reducedLeft == true.lift() || reducedRight == true.lift() -> true.lift()
@@ -86,11 +86,12 @@ class Reducer : ESExpressionVisitor<ESExpression?> {
         }
     }
 
-    override fun visitNot(not: ESNot): ESBooleanExpression {
-        val reducedArg = not.arg.accept(this) as ESBooleanExpression
+    override fun visitNot(not: ESNot): ESExpression? {
+        val reducedArg = not.arg.accept(this) ?: return null
 
         return when (reducedArg) {
-            is ESBooleanConstant -> reducedArg.negated()
+            ESConstant.TRUE -> ESConstant.FALSE
+            ESConstant.FALSE -> ESConstant.TRUE
             else -> reducedArg
         }
     }
@@ -98,6 +99,4 @@ class Reducer : ESExpressionVisitor<ESExpression?> {
     override fun visitVariable(esVariable: ESVariable): ESVariable = esVariable
 
     override fun visitConstant(esConstant: ESConstant): ESConstant = esConstant
-
-    override fun visitLambda(esLambda: ESLambda): ESExpression? = esLambda
 }

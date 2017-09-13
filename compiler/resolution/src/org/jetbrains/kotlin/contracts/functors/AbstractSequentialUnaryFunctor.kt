@@ -17,33 +17,34 @@
 package org.jetbrains.kotlin.contracts.functors
 
 import org.jetbrains.kotlin.contracts.effects.ESReturns
-import org.jetbrains.kotlin.contracts.factories.boundSchemaFromClauses
 import org.jetbrains.kotlin.contracts.structure.ESClause
 import org.jetbrains.kotlin.contracts.structure.ESFunctor
 import org.jetbrains.kotlin.contracts.structure.EffectSchema
+import org.jetbrains.kotlin.contracts.structure.calltree.Computation
 
 
 /**
  * Unary functor that has sequential semantics, i.e. it won't apply to
  * computations that can't be guaranteed to be finished.
  *
- *  It provides [combineClauses] method for successors, which is guaranteed to
+ * It provides [applyToFinishingClauses] method for successors, which is guaranteed to
  * be called only on clauses that haven't failed before reaching functor transformation.
  */
-abstract class AbstractSequentialUnaryFunctor : ESFunctor {
-    override fun apply(arguments: List<EffectSchema>): EffectSchema? {
+abstract class AbstractSequentialUnaryFunctor : ESFunctor() {
+    override fun doApplication(arguments: List<Computation>): EffectSchema {
         assert(arguments.size == 1, { "Wrong size of arguments list for Unary operator: expected 1, got ${arguments.size}" })
         return apply(arguments[0])
     }
 
-    fun apply(arg: EffectSchema): EffectSchema? {
-        val (returning, rest) = arg.clauses.partition { it.effect is ESReturns }
+    fun apply(arg: Computation): EffectSchema {
+        val (returning, rest) = arg.effects.clauses.partition { it.effect is ESReturns }
 
-        val evaluatedByFunctor = combineClauses(returning)
+        val evaluatedByFunctor = applyToFinishingClauses(returning)
 
-        return boundSchemaFromClauses(rest + evaluatedByFunctor)
+        return EffectSchema(rest + evaluatedByFunctor)
     }
 
-    abstract fun combineClauses(list: List<ESClause>): List<ESClause>
+    abstract fun applyToFinishingClauses(list: List<ESClause>): List<ESClause>
 }
+
 

@@ -16,19 +16,17 @@
 
 package org.jetbrains.kotlin.contracts
 
-import org.jetbrains.kotlin.contracts.structure.ConstantID
-import org.jetbrains.kotlin.contracts.structure.ESValueID
+import org.jetbrains.kotlin.contracts.impls.ESValue
+import org.jetbrains.kotlin.contracts.impls.ESVariable
+import org.jetbrains.kotlin.contracts.structure.ESExpressionVisitor
+import org.jetbrains.kotlin.descriptors.ValueDescriptor
+import org.jetbrains.kotlin.psi.KtLambdaExpression
 import org.jetbrains.kotlin.resolve.calls.smartcasts.DataFlowValue
 
-class DataFlowValueID(val dfv: DataFlowValue) : ESValueID {
-    override fun equals(other: Any?): Boolean = other is DataFlowValueID && dfv == other.dfv
+class ESDataFlowValue(descriptor: ValueDescriptor, val dataFlowValue: DataFlowValue) : ESVariable(descriptor)
 
-    override fun hashCode(): Int = dfv.hashCode()
-
-    override fun toString(): String = dfv.identifierInfo.toString()
-}
-
-object ValueIdsFactory {
-    fun idForConstant(value: Any?): ESValueID = ConstantID(value)
-    fun dfvBased(dfv: DataFlowValue): ESValueID = DataFlowValueID(dfv)
+class ESLambda(val lambda: KtLambdaExpression) : ESValue(null) {
+    override fun <T> accept(visitor: ESExpressionVisitor<T>): T {
+        throw IllegalStateException("Lambdas shouldn't be visited by ESExpressionVisitor")
+    }
 }

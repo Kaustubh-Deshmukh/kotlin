@@ -27,10 +27,5 @@ interface ESExpressionVisitor<out T> {
     fun visitOr(or: ESOr): T
 
     fun visitVariable(esVariable: ESVariable): T
-    fun visitBooleanVariable(esBooleanVariable: ESBooleanVariable): T = visitVariable(esBooleanVariable)
-
     fun visitConstant(esConstant: ESConstant): T
-    fun visitBooleanConstant(esBooleanConstant: ESBooleanConstant): T = visitConstant(esBooleanConstant)
-
-    fun visitLambda(esLambda: ESLambda): T
 }

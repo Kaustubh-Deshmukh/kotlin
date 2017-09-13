@@ -16,8 +16,10 @@
 
 package org.jetbrains.kotlin.contracts.functors
 
-import org.jetbrains.kotlin.contracts.impls.or
-import org.jetbrains.kotlin.contracts.structure.*
+import org.jetbrains.kotlin.contracts.impls.ESOr
+import org.jetbrains.kotlin.contracts.structure.ESClause
+import org.jetbrains.kotlin.contracts.structure.ESEffect
+import org.jetbrains.kotlin.contracts.structure.ESExpression
 
 /**
  * Applies [operation] to [first] and [second] if both not-null, otherwise returns null
@@ -37,11 +39,11 @@ internal fun <F : R, S : R, R> applyWithDefault(first: F?, second: S?, operation
     else -> operation(first, second)
 }
 
-internal fun foldConditionsWithOr(list: List<ESClause>): ESBooleanExpression? =
+internal fun foldConditionsWithOr(list: List<ESClause>): ESExpression? =
         if (list.isEmpty())
             null
         else
-            list.map { it.condition }.reduce { acc, condition -> acc.or(condition) }
+            list.map { it.condition }.reduce { acc, condition -> ESOr(acc, condition) }
 
 /**
  * Places all clauses that equal to `firstModel` into first list, and all clauses that equal to `secondModel` into second list
@@ -56,12 +58,4 @@ internal fun List<ESClause>.strictPartition(firstModel: ESEffect, secondModel: E
     }
 
     return first to second
-}
-
-/**
- * Object that represents absence of information about particular part of code
- */
-object UnknownFunctor : ESFunctor, EffectSchema {
-    override fun apply(arguments: List<EffectSchema>): EffectSchema? = this
-    override val clauses: List<ESClause> = listOf()
 }

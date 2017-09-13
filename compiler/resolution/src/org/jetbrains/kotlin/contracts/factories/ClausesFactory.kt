@@ -16,9 +16,10 @@
 
 package org.jetbrains.kotlin.contracts.factories
 
-import org.jetbrains.kotlin.contracts.structure.ESBooleanExpression
+import org.jetbrains.kotlin.contracts.impls.lift
 import org.jetbrains.kotlin.contracts.structure.ESClause
 import org.jetbrains.kotlin.contracts.structure.ESEffect
+import org.jetbrains.kotlin.contracts.structure.ESExpression
 
-fun createClause(premise: ESBooleanExpression, conclusion: ESEffect) = ESClause(premise, conclusion)
+fun createClause(condition: ESExpression, effect: ESEffect) = ESClause(condition, effect)
 fun createUnconditionalClause(effect: ESEffect): ESClause = ESClause(true.lift(), effect)

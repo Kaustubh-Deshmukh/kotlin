@@ -16,48 +16,49 @@
 
 package org.jetbrains.kotlin.contracts.visitors
 
-import org.jetbrains.kotlin.contracts.factories.pureSchema
 import org.jetbrains.kotlin.contracts.impls.*
-import org.jetbrains.kotlin.contracts.structure.EffectSchema
 import org.jetbrains.kotlin.contracts.structure.ESExpressionVisitor
+import org.jetbrains.kotlin.contracts.structure.EffectSchema
+import org.jetbrains.kotlin.contracts.structure.calltree.BuiltInOperator
+import org.jetbrains.kotlin.contracts.structure.calltree.BuiltInOperatorCall
+import org.jetbrains.kotlin.contracts.structure.calltree.Computation
 
 /**
  * Given an [ESExpression], substitutes all variables in it using provided [substitutions] map,
  * and then flattens resulting tree, producing an [EffectSchema], which describes effects
  * of this [ESExpression] with effects of arguments taken into consideration.
  */
-class Substitutor(private val substitutions: Map<ESVariable, EffectSchema>) : ESExpressionVisitor<EffectSchema?> {
-    override fun visitIs(isOperator: ESIs): EffectSchema? {
+class Substitutor(private val substitutions: Map<ESVariable, Computation>) : ESExpressionVisitor<Computation?> {
+    override fun visitIs(isOperator: ESIs): Computation? {
         val arg = isOperator.left.accept(this) ?: return null
-        return isOperator.functor.apply(arg)
+        return BuiltInOperatorCall(BuiltInOperator.IS, isOperator.functor.apply(arg))
     }
 
-    override fun visitNot(not: ESNot): EffectSchema? {
+    override fun visitNot(not: ESNot): Computation? {
         val arg = not.arg.accept(this) ?: return null
-        return not.functor.apply(arg)
+        return BuiltInOperatorCall(BuiltInOperator.NOT, not.functor.apply(arg))
     }
 
-    override fun visitEqual(equal: ESEqual): EffectSchema? {
+    override fun visitEqual(equal: ESEqual): Computation? {
         val left = equal.left.accept(this) ?: return null
-        return equal.functor.apply(left)
+        val right = equal.right.accept(this) ?: return null
+        return BuiltInOperatorCall(BuiltInOperator.EQUALS, equal.functor.apply(listOf(left, right)))
     }
 
-    override fun visitAnd(and: ESAnd): EffectSchema? {
+    override fun visitAnd(and: ESAnd): Computation? {
         val left = and.left.accept(this) ?: return null
         val right = and.right.accept(this) ?: return null
-        return and.functor.apply(left, right)
+        return BuiltInOperatorCall(BuiltInOperator.AND, and.functor.apply(left, right))
     }
 
-    override fun visitOr(or: ESOr): EffectSchema? {
+    override fun visitOr(or: ESOr): Computation? {
         val left = or.left.accept(this) ?: return null
         val right = or.right.accept(this) ?: return null
-        return or.functor.apply(left, right)
+        return BuiltInOperatorCall(BuiltInOperator.OR, or.functor.apply(left, right))
     }
 
-    override fun visitVariable(esVariable: ESVariable): EffectSchema?
-            = substitutions[esVariable] ?: pureSchema(esVariable)
+    override fun visitVariable(esVariable: ESVariable): Computation?
+            = substitutions[esVariable] ?: esVariable
 
-    override fun visitConstant(esConstant: ESConstant): EffectSchema? = pureSchema(esConstant)
-
-    override fun visitLambda(esLambda: ESLambda): EffectSchema? = visitVariable(esLambda)
+    override fun visitConstant(esConstant: ESConstant): Computation? = esConstant
 }

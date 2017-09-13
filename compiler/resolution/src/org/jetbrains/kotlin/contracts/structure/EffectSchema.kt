@@ -25,6 +25,8 @@ package org.jetbrains.kotlin.contracts.structure
  * incomplete, meaning that if [clauses] doesn't mention some effect,
  * it is interpreted as an *absence of information* about that effect.
  */
-interface EffectSchema : ESFunctor {
-    val clauses: List<ESClause>
+class EffectSchema(val clauses: List<ESClause>) {
+    constructor(vararg clauses: ESClause) : this(clauses.asList())
 }
+
+val EMPTY_SCHEMA = EffectSchema(emptyList())

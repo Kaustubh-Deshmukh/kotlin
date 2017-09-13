@@ -16,8 +16,8 @@
 
 package org.jetbrains.kotlin.contracts
 
+import org.jetbrains.kotlin.contracts.impls.ESValue
 import org.jetbrains.kotlin.contracts.structure.ESEffect
-import org.jetbrains.kotlin.contracts.structure.ESValue
 import org.jetbrains.kotlin.types.KotlinType
 
 /**

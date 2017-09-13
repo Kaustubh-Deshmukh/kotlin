@@ -17,10 +17,11 @@
 package org.jetbrains.kotlin.contracts.functors
 
 import org.jetbrains.kotlin.contracts.effects.ESReturns
-import org.jetbrains.kotlin.contracts.factories.boundSchemaFromClauses
+import org.jetbrains.kotlin.contracts.impls.ESConstant
 import org.jetbrains.kotlin.contracts.structure.ESClause
 import org.jetbrains.kotlin.contracts.structure.ESFunctor
 import org.jetbrains.kotlin.contracts.structure.EffectSchema
+import org.jetbrains.kotlin.contracts.structure.calltree.Computation
 
 /**
  * Binary functor that has sequential semantics, i.e. it won't apply to
@@ -29,20 +30,19 @@ import org.jetbrains.kotlin.contracts.structure.EffectSchema
  * It provides [combineClauses] method for successors, which is guaranteed to
  * be called only on clauses that haven't failed before reaching functor transformation.
  */
-abstract class AbstractSequentialBinaryFunctor : ESFunctor {
-    override fun apply(arguments: List<EffectSchema>): EffectSchema? {
+abstract class AbstractSequentialBinaryFunctor : ESFunctor() {
+    override fun doApplication(arguments: List<Computation>): EffectSchema {
         assert(arguments.size == 2, { "Wrong size of arguments list for Binary operator: expected 2, got ${arguments.size}" })
         return apply(arguments[0], arguments[1])
     }
 
-    fun apply(left: EffectSchema, right: EffectSchema): EffectSchema? {
-        val (leftReturning, leftRest) = left.clauses.partition { it.effect is ESReturns }
-        val (rightReturning, rightRest) = right.clauses.partition { it.effect is ESReturns }
+    fun apply(left: Computation, right: Computation): EffectSchema {
+        val (leftReturning, leftRest) = left.effects.clauses.partition { it.effect is ESReturns && it.effect.value != ESConstant.WILDCARD }
+        val (rightReturning, rightRest) = right.effects.clauses.partition { it.effect is ESReturns && it.effect.value != ESConstant.WILDCARD }
 
-        // Traces that evaluated both arguments and went to the functor
         val evaluatedByFunctor = combineClauses(leftReturning, rightReturning)
 
-        return boundSchemaFromClauses(leftRest + rightRest + evaluatedByFunctor)
+        return EffectSchema(leftRest + rightRest + evaluatedByFunctor)
     }
 
     abstract fun combineClauses(left: List<ESClause>, right: List<ESClause>): List<ESClause>

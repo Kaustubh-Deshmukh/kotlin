@@ -16,6 +16,9 @@
 
 package org.jetbrains.kotlin.contracts.structure
 
+import org.jetbrains.kotlin.contracts.structure.calltree.Computation
+import org.jetbrains.kotlin.contracts.visitors.Reducer
+
 /**
  * An abstraction of effect-generating nature of some compitation.
  *
@@ -27,7 +30,11 @@ package org.jetbrains.kotlin.contracts.structure
  * are transformed.
  */
 
-interface ESFunctor {
-    fun apply(arguments: List<EffectSchema>): EffectSchema?
+abstract class ESFunctor {
+    private val reducer = Reducer()
+
+    fun apply(arguments: List<Computation>): EffectSchema = reducer.reduceSchema(doApplication(arguments))
+
+    abstract protected fun doApplication(arguments: List<Computation>): EffectSchema
 }
 

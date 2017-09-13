@@ -16,15 +16,16 @@
 
 package org.jetbrains.kotlin.contracts.effects
 
+import org.jetbrains.kotlin.contracts.impls.ESValue
 import org.jetbrains.kotlin.descriptors.contracts.effects.InvocationKind
 import org.jetbrains.kotlin.contracts.structure.ESEffect
 import org.jetbrains.kotlin.contracts.impls.ESVariable
 
-data class ESCalls(val callable: ESVariable, val kind: InvocationKind): ESEffect {
+data class ESCalls(val callable: ESValue, val kind: InvocationKind): ESEffect {
     override fun isImplies(other: ESEffect): Boolean? {
         if (other !is ESCalls) return null
 
-        if (callable.id != other.callable.id) return null
+        if (callable != other.callable) return null
 
         return kind == other.kind
     }

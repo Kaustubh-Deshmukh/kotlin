@@ -20,17 +20,6 @@ interface ESExpression {
     fun <T> accept(visitor: ESExpressionVisitor<T>): T
 }
 
-interface ESBooleanExpression : ESExpression
-
 interface ESOperator : ESExpression {
     val functor: ESFunctor
 }
-
-interface ESBooleanOperator : ESOperator, ESBooleanExpression
-
-interface ESValue : ESExpression {
-    val id: ESValueID
-}
-
-interface ESBooleanValue : ESValue, ESBooleanExpression
-

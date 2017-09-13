@@ -16,8 +16,10 @@
 
 package org.jetbrains.kotlin.contracts.structure.calltree
 
-import org.jetbrains.kotlin.contracts.structure.ESValueID
-import org.jetbrains.kotlin.contracts.structure.ESFunctor
+import org.jetbrains.kotlin.builtins.DefaultBuiltIns
+import org.jetbrains.kotlin.contracts.structure.EMPTY_SCHEMA
+import org.jetbrains.kotlin.contracts.structure.EffectSchema
+import org.jetbrains.kotlin.descriptors.FunctionDescriptor
 import org.jetbrains.kotlin.types.KotlinType
 
 /**
@@ -25,26 +27,23 @@ import org.jetbrains.kotlin.types.KotlinType
  * essentially tree of nested calls and their arguments
  */
 
-interface CTNode {
-    fun <T> accept(visitor: CallTreeVisitor<T>):  T
+interface Computation {
+    val type: KotlinType?
+    val effects: EffectSchema
 }
 
-class CTCall(val functor: ESFunctor, val arguments: List<CTNode>) : CTNode {
-    override fun <T> accept(visitor: CallTreeVisitor<T>): T = visitor.visitCall(this)
+abstract class AbstractComputation(override val type: KotlinType?, override val effects: EffectSchema) : Computation
+
+class FunctionCall(val sourceDescriptor: FunctionDescriptor, effects: EffectSchema) : AbstractComputation(sourceDescriptor.returnType, effects)
+
+class BuiltInOperatorCall(val operatorKind: BuiltInOperator, effects: EffectSchema) : AbstractComputation(DefaultBuiltIns.Instance.booleanType, effects)
+
+enum class BuiltInOperator {
+    EQUALS,
+    AND,
+    OR,
+    NOT,
+    IS
 }
 
-interface CTValue : CTNode {
-    val id: ESValueID
-}
-
-class CTConstant(override val id: ESValueID, val type: KotlinType, val value: Any?): CTValue {
-    override fun <T> accept(visitor: CallTreeVisitor<T>): T = visitor.visitConstant(this)
-}
-
-class CTVariable(override val id: ESValueID, val type: KotlinType): CTValue {
-    override fun <T> accept(visitor: CallTreeVisitor<T>): T = visitor.visitVariable(this)
-}
-
-class CTLambda(override val id: ESValueID, val type: KotlinType, val lambdaFunctor: ESFunctor?): CTValue {
-    override fun <T> accept(visitor: CallTreeVisitor<T>): T = visitor.visitLambda(this)
-}
+object UNKNOWN_COMPUTATION : AbstractComputation(DefaultBuiltIns.Instance.anyType, EMPTY_SCHEMA)
